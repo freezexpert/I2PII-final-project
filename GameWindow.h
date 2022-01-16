@@ -11,6 +11,7 @@
 #include "WolfKnight.h"
 #include "CaveMan.h"
 #include "Wolf.h"
+#include "Emerald.h"
 #include "DemonNijia.h"
 #include "Arcane.h"
 #include "Archer.h"
