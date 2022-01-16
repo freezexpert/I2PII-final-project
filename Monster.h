@@ -10,7 +10,7 @@
 #include "Circle.h"
 #include "global.h"
 
-enum {LEFT=0, RIGHT, UP, DOWN};
+enum {LEFT=0, RIGHT};
 
 class Monster: public Object {
 public:
