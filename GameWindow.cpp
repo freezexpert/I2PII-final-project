@@ -129,7 +129,10 @@ Monster*
 GameWindow::create_monster()
 {
     Monster *m = NULL;
-
+    if(level->MonsterNum[EMERALD]){
+        level->MonsterNum[EMERALD]--;
+        m = new Emerald(level->ReturnPath());
+    }
     if(level->MonsterNum[WOLF])
     {
         level->MonsterNum[WOLF]--;
@@ -200,7 +203,7 @@ GameWindow::GameWindow()
     event_queue = al_create_event_queue();
 
     timer = al_create_timer(1.0 / FPS);
-    monster_pro = al_create_timer(1.0 / FPS);
+    monster_pro = al_create_timer(5.0 / FPS);
 
     if(timer == NULL || monster_pro == NULL)
         show_err_msg(-1);
