@@ -32,7 +32,6 @@ GameWindow::GameWindow()
     display = al_create_display(window_width, window_height);
     event_queue = al_create_event_queue();
 
-    game_update_timer = al_create_timer(1.0f / FPS);
     timer = al_create_timer(1.0f/ FPS);
     monster_pro = al_create_timer(1.0 / FPS);
 
@@ -59,13 +58,11 @@ GameWindow::GameWindow()
     al_register_event_source(event_queue, al_get_display_event_source(display));
     al_register_event_source(event_queue, al_get_keyboard_event_source());
     al_register_event_source(event_queue, al_get_mouse_event_source());
-    al_register_event_source(event_queue, al_get_timer_event_source(game_update_timer));
     al_register_event_source(event_queue, al_get_timer_event_source(timer));
     al_register_event_source(event_queue, al_get_timer_event_source(monster_pro));
 
     game_init();
     al_start_timer(timer);
-    al_start_timer(game_update_timer);
     al_start_timer(monster_pro);
 }
 
@@ -88,11 +85,6 @@ void GameWindow::game_init(void) {
     enemy1_pic = al_load_bitmap("./enemy1.png");
     enemy2_pic = al_load_bitmap("./enemy2.png");
     enemy3_pic = al_load_bitmap("./enemy3.png");
-    /*for(int i = 0; i < Num_TowerType; i++)
-    {
-        sprintf(buffer, "./Tower/%s.png", TowerClass[i]);
-        tower[i] = al_load_bitmap(buffer);
-    }*/
 
     al_set_display_icon(display, icon);
     al_reserve_samples(3);
@@ -102,7 +94,7 @@ void GameWindow::game_init(void) {
     al_set_sample_instance_playmode(startSound, ALLEGRO_PLAYMODE_ONCE);
     al_attach_sample_instance_to_mixer(startSound, al_get_default_mixer());
 
-    sample = al_load_sample("BackgroundMusic.ogg");
+    sample = al_load_sample("Bgm.ogg");
     backgroundSound = al_create_sample_instance(sample);
     al_set_sample_instance_playmode(backgroundSound, ALLEGRO_PLAYMODE_ONCE);
     al_attach_sample_instance_to_mixer(backgroundSound, al_get_default_mixer());
@@ -123,7 +115,7 @@ void GameWindow::game_start_event_loop(void) {
             done = true;
         } else if (event.type == ALLEGRO_EVENT_TIMER) {
             // Event for redrawing the display.
-            if (event.timer.source == game_update_timer)
+            if (event.timer.source == timer)
                 // The redraw timer has ticked.
                 redraws++;
         } else if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
@@ -171,21 +163,16 @@ void GameWindow::game_start_event_loop(void) {
 void GameWindow::game_update(void) {
     if (active_scene == SCENE_START) {
         unsigned int i, j;
-    std::list<Tower*>::iterator it;
        char buffer[100];
         player.vx = 0;
 
         if (key_state[ALLEGRO_KEY_LEFT])
-            player.vx -= 10;
+            player.vx -= 1;
         if (key_state[ALLEGRO_KEY_RIGHT])
-            player.vx += 10;
+            player.vx += 1;
         // 0.71 is (1/sqrt(2)).
         //player.y += player.vy * 4 * (player.vx ? 0.71f : 1);
         player.x += player.vx * 4 * 1;
-        // [HACKATHON 1-1]
-        // TODO: Limit the plane's collision box inside the frame.
-        //       (x, y axes can be separated.)
-        // Uncomment and fill in the code below.
         if (player.x-0-player.w/2 < 0)
             player.x = (player.w)/2;
         else if (player.x + player.w/2 > window_width)
@@ -230,29 +217,22 @@ void GameWindow::game_update(void) {
                 player_attack[i].hidden = true;
         }
         double now1 = al_get_time();
-        if (key_state[ALLEGRO_KEY_R] && now1 - last_shoot_timestamp_player >= MAX_COOLDOWN) {
+        if ((key_state[ALLEGRO_KEY_R]||key_state[ALLEGRO_KEY_L] )&& now1 - last_shoot_timestamp_player >= MAX_COOLDOWN) {
             for (i = 0; i<MAX_BULLET;i++) {
                if (player_attack[i].hidden==true) {
                     last_shoot_timestamp_player = now1;
                     player_attack[i].hidden = false;
-                    player_attack[i].x = player.x + player.w/2;
-                    player_attack[i].y = player.y;
+                    if(key_state[ALLEGRO_KEY_R])
+                        player_attack[i].x = player.x + player.w/2;
+                    else
+                        player_attack[i].x = player.x - player.w/2;
+                        player_attack[i].y = player.y;
 
                     break;
                 }
             }
         }
-        else if (key_state[ALLEGRO_KEY_L]&& now1 - last_shoot_timestamp_player >= MAX_COOLDOWN) {
-            for (i = 0; i<MAX_BULLET;i++) {
-               if (player_attack[i].hidden==true) {
-                    last_shoot_timestamp_player = now1;
-                    player_attack[i].hidden = false;
-                    player_attack[i].x = player.x - player.w/2;
-                    player_attack[i].y = player.y;
-                    break;
-                }
-            }
-        }
+
         for(int i=0;i<MAX_BULLET;i++)
         {
             for(int j=0;j<MAX_ENEMY1;j++)
@@ -269,14 +249,68 @@ void GameWindow::game_update(void) {
                    if(enemy1[j].hp<=0)
                    {
                        enemy1[j].hidden=true;
-
+                        plus_hp = rand();
+                        plus_mp = rand();
+                        if(plus_hp % 3 == 0)
+                                player.hp += 5;
+                        if(plus_mp % 3 == 0)
+                            player.mp += 5;
 
                    }
                    player_attack[i].hidden=true;
                }
             }
+            for(int j=0;j<MAX_ENEMY2;j++)
+            {
+                if(player_attack[i].hidden || enemy2[j].hidden) continue;
+                if((player_attack[i].y-(player_attack[j].h)/2<=enemy2[j].y+(enemy2[j].h)/2
+                    &&player_attack[i].y+(player_attack[j].h)/2>=enemy2[j].y-(enemy2[j].h)/2)
+                   &&(player_attack[i].x<=enemy2[j].x+enemy2[j].w/2
+                      &&player_attack[i].x>=enemy2[j].x-enemy2[j].w/2))
+               {
+                   enemy2[j].hp-=player_attack[i].attack;
+
+                   score+=player_attack[i].attack;
+                   if(enemy2[j].hp<=0)
+                   {
+                       enemy2[j].hidden=true;
+                        plus_hp = rand();
+                        plus_mp = rand();
+                        if(plus_hp % 3 == 0)
+                                player.hp += 5;
+                        if(plus_mp % 3 == 0)
+                            player.mp += 5;
+
+                   }
+                   player_attack[i].hidden=true;
+               }
+            }
+            for(int j=0;j<MAX_ENEMY3;j++)
+            {
+                if(player_attack[i].hidden || enemy3[j].hidden) continue;
+                if((player_attack[i].y-(player_attack[j].h)/2<=enemy3[j].y+(enemy3[j].h)/2
+                    &&player_attack[i].y+(player_attack[j].h)/2>=enemy3[j].y-(enemy3[j].h)/2)
+                   &&(player_attack[i].x<=enemy3[j].x+enemy3[j].w/2
+                      &&player_attack[i].x>=enemy3[j].x-enemy3[j].w/2))
+               {
+                   enemy3[j].hp-=player_attack[i].attack;
+
+                   score+=player_attack[i].attack;
+                   if(enemy3[j].hp<=0)
+                   {
+                       enemy3[j].hidden=true;
+                        plus_hp = rand();
+                        plus_mp = rand();
+                        if(plus_hp % 3 == 0)
+                                player.hp += 5;
+                        if(plus_mp % 3 == 0)
+                            player.mp += 5;
+                   }
+                   player_attack[i].hidden=true;
+               }
+            }
         }
-                for(i = 0; i < MAX_ENEMY1; i++){
+        for(i = 0; i < MAX_ENEMY1; i++){
 			if(enemy1[i].hidden)
         		continue;
         	if( enemy1[i].x - enemy1[i].w / 2 <= player.x + player.w / 2 && enemy1[i].x + enemy1[i].w/3 >= player.x - player.w / 2){
@@ -324,7 +358,6 @@ void GameWindow::game_update(void) {
         if(player.hp <= 0){
             player.hp = player.full_hp;
             game_change_scene(SCENE_HOME);
-
         }
 
 
@@ -339,14 +372,10 @@ void GameWindow::game_update(void) {
         // 0.71 is (1/sqrt(2)).
         //player.y += player.vy * 4 * (player.vx ? 0.71f : 1);
         player.x += player.vx * 4 * 1;
-        // [HACKATHON 1-1]
-        // TODO: Limit the plane's collision box inside the frame.
-        //       (x, y axes can be separated.)
-        // Uncomment and fill in the code below.
-        if (player.x-0-player.w/2 < 0)
+        if (player.x - player.w/2 < 0)
             player.x = (player.w)/2;
-        else if (player.x + player.w/2 > field_width)
-            player.x = field_width-(player.w)/2;
+        else if (player.x + player.w/2 > window_width)
+            player.x = window_width - (player.w)/2;
     }
 }
 
@@ -366,18 +395,13 @@ void GameWindow::game_draw(void) {
 //
     else if (active_scene == SCENE_START) {
 
-        al_clear_to_color(al_map_rgb(100, 100, 100));
-        al_draw_bitmap(background, 0, 0, 0);
+        //al_clear_to_color(al_map_rgb(100, 100, 100));
+        al_draw_bitmap(home_pic, 0, 0, 0);
 
-        al_play_sample_instance(startSound);
-        while(al_get_sample_instance_playing(startSound));
-            al_play_sample_instance(backgroundSound);
-        sprintf(buffer, "hp : %d",player.hp);
-        //printf("%d\n",player.hp);
-        //printf("%d\n",player.mp);
-        al_draw_text(Medium_font, al_map_rgb(255, 255, 255), 200, 100, 0, buffer);
-        sprintf(buffer, "mp : %d",player.mp);
-        al_draw_text(Medium_font, al_map_rgb(255, 255, 255), 300, 100, 0, buffer);
+        //al_play_sample_instance(startSound);
+        //while(al_get_sample_instance_playing(startSound));
+        al_play_sample_instance(backgroundSound);
+
 
         for(int i = 0;i < MAX_BULLET;i++){
             player_attack[i].img = player.img_tool;
@@ -397,7 +421,12 @@ void GameWindow::game_draw(void) {
         {
             monsterSet[i]->Draw();
         }*/
-
+        sprintf(buffer, "hp : %d",player.hp);
+                //printf("%d\n",player.hp);
+                //printf("%d\n",player.mp);
+        al_draw_text(Medium_font, al_map_rgb(255, 255, 255), 200, 100, 0, buffer);
+        sprintf(buffer, "mp : %d",player.mp);
+        al_draw_text(Medium_font, al_map_rgb(255, 255, 255), 300, 100, 0, buffer);
 
     /*for(std::list<Tower*>::iterator it = towerSet.begin(); it != towerSet.end(); it++)
         (*it)->Draw();
@@ -491,19 +520,12 @@ GameWindow::game_destroy()
 void GameWindow::game_change_scene(int next_scene) {
 
     /*if (active_scene == SCENE_MENU) {
-
-
-
-
     }
     else if (active_scene == SCENE_START) {
-
     }
     else if (active_scene == SCENE_WIN) {
-
     }
     else if (active_scene == SCENE_GAME_OVER) {
-
     }*/
     active_scene = next_scene;
     // TODO: Allocate resources before entering scene.
@@ -534,9 +556,8 @@ void GameWindow::game_change_scene(int next_scene) {
                 player_attack[i].attack = player.attack;
                 player_attack[i].w = al_get_bitmap_width(role1_tool);
                 player_attack[i].h = al_get_bitmap_height(role1_tool);
-                player_attack[i].vx = -3;
-                player_attack[i].x = player.x;
-                player_attack[i].y = player.y;
+                player_attack[i].vx = -1;
+
             }
         }
         else if(role == 2){
@@ -611,7 +632,7 @@ void GameWindow::game_change_scene(int next_scene) {
         for(int i = 0; i < MAX_ENEMY1; i++){
             enemy1[i].img=enemy1_pic;
             enemy1[i].x=enemy1[i].w / 2 + (float)rand() / RAND_MAX * (window_width - enemy1[i].w);
-            enemy1[i].y=20;
+            enemy1[i].y=600;
             enemy1[i].vx = 10;
             enemy1[i].w=al_get_bitmap_width(enemy1[i].img);
             enemy1[i].h=al_get_bitmap_height(enemy1[i].img);
@@ -622,7 +643,7 @@ void GameWindow::game_change_scene(int next_scene) {
         for(int i = 0; i < MAX_ENEMY2; i++){
             enemy2[i].img=enemy2_pic;
             enemy2[i].x=enemy2[i].w / 2 + (float)rand() / RAND_MAX * (window_width - enemy2[i].w);
-            enemy2[i].y=40;
+            enemy2[i].y=400;
             enemy2[i].vx = 15;
             enemy2[i].w=al_get_bitmap_width(enemy2[i].img);
             enemy2[i].h=al_get_bitmap_height(enemy2[i].img);
@@ -633,7 +654,7 @@ void GameWindow::game_change_scene(int next_scene) {
         for(int i = 0; i < MAX_ENEMY3; i++){
             enemy3[i].img=enemy3_pic;
             enemy3[i].x=enemy3[i].w / 2 + (float)rand() / RAND_MAX * (window_width - enemy3[i].w);
-            enemy3[i].y=60;
+            enemy3[i].y=400;
             enemy3[i].vx = 20;
             enemy3[i].w=al_get_bitmap_width(enemy3[i].img);
             enemy3[i].h=al_get_bitmap_height(enemy3[i].img);
@@ -648,13 +669,9 @@ void GameWindow::game_change_scene(int next_scene) {
     }
     /*else if(active_scene==SCENE_WIN)
     {
-
     }
     else if(active_scene==SCENE_GAME_OVER)
     {
-
-
-
     }*/
 
 }
