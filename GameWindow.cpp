@@ -18,10 +18,6 @@ void set_attack_volume(float volume)
     Attack::volume = volume;
 }
 
-bool compare(Tower *t1, Tower *t2)
-{
-    return (t1->getY() <= t2->getY());
-}
 GameWindow::GameWindow()
 {
     if (!al_init())
@@ -212,8 +208,7 @@ void GameWindow::game_update(void) {
             if (player_attack[i].hidden==true)
                 continue;
             player_attack[i].x += player_attack[i].vx;
-
-            if (player_attack[i].x< 0||player_attack[i].y<0)
+            if (player_attack[i].x< 0||player_attack[i].x  >= window_width)
                 player_attack[i].hidden = true;
         }
         double now1 = al_get_time();
@@ -222,11 +217,16 @@ void GameWindow::game_update(void) {
                if (player_attack[i].hidden==true) {
                     last_shoot_timestamp_player = now1;
                     player_attack[i].hidden = false;
-                    if(key_state[ALLEGRO_KEY_R])
+                    if(key_state[ALLEGRO_KEY_R]){
+                        player_attack[i].vx = 1;
                         player_attack[i].x = player.x + player.w/2;
-                    else
-                        player_attack[i].x = player.x - player.w/2;
                         player_attack[i].y = player.y;
+                    }
+                    else{
+                        player_attack[i].vx = -1;
+                        player_attack[i].x = player.x + player.w/2;
+                        player_attack[i].y = player.y;
+                    }
 
                     break;
                 }
@@ -631,7 +631,7 @@ void GameWindow::game_change_scene(int next_scene) {
         }
         for(int i = 0; i < MAX_ENEMY1; i++){
             enemy1[i].img=enemy1_pic;
-            enemy1[i].x=enemy1[i].w / 2 + (float)rand() / RAND_MAX * (window_width - enemy1[i].w);
+            enemy1[i].x=(window_width - enemy1[i].w);
             enemy1[i].y=600;
             enemy1[i].vx = 10;
             enemy1[i].w=al_get_bitmap_width(enemy1[i].img);
@@ -732,7 +732,9 @@ void GameWindow::on_mouse_down(int btn, int x, int y) {
 }
 
 void GameWindow::draw_movable_object(MovableObject obj) {
-
+    if(obj.hidden){
+        return;
+    }
     al_draw_bitmap(obj.img, round(obj.x - obj.w / 2), round(obj.y - obj.h / 2), 0);
 }
 ALLEGRO_BITMAP *load_bitmap_resized(const char *filename, int w, int h) {
