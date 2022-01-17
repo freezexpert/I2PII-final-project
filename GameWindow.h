@@ -12,14 +12,9 @@
 #include <time.h>
 #include "Menu.h"
 #include "Level.h"
-#include "WolfKnight.h"
-#include "CaveMan.h"
-#include "Wolf.h"
-#include "DemonNijia.h"
-#include "Tower.h"
 #include "Attack.h"
 #include "Slider.h"
-#include "Emerald.h"
+
 //#include "player.h"
 #define GAME_INIT -1
 #define GAME_SETTING 0
@@ -36,7 +31,7 @@
 // The active scene id.
 
 // clock rate
-const float FPS = 100000;
+const float FPS = 40;
 
 // total number of level
 const int LevelNum = 4;
@@ -89,14 +84,7 @@ public:
     void game_destroy(void);
 // Function to change from one scene to another.
     void game_change_scene(int next_scene);
-    Monster* create_monster();
-    //void draw_movable_object(MovableObject* obj);
-// Load resized bitmap and check if failed.
     ALLEGRO_BITMAP *load_bitmap_resized(const char *filename, int w, int h);
-// [HACKATHON 3-2]
-// TODO: Declare a function.
-// Determines whether the point (px, py) is in rect (x, y, w, h).
-// Uncomment the code below.
 bool pnt_in_rect(int px, int py, int x, int y, int w, int h);
 void draw_movable_object(MovableObject obj);
 /* Event callbacks. */
@@ -121,6 +109,8 @@ public:
     // Mouse state, whether the key is down or not.
     // 1 is for left, 2 is for right, 3 is for middle.
     bool *mouse_state;
+    int plus_hp;
+    int plus_mp;
     // Mouse position.
     int mouse_x, mouse_y;
     MovableObject player;
@@ -138,12 +128,9 @@ public:
 };
 private:
     ALLEGRO_BITMAP *icon;
-    ALLEGRO_BITMAP *tower[Num_TowerType];
     ALLEGRO_BITMAP *background = NULL;
     ALLEGRO_BITMAP *menu_pic = NULL;
     ALLEGRO_BITMAP *settings_pic;
-    ALLEGRO_BITMAP *start_button1;
-    ALLEGRO_BITMAP *start_button2;
     ALLEGRO_BITMAP *role1;
     ALLEGRO_BITMAP *role2;
     ALLEGRO_BITMAP *role3;
@@ -169,14 +156,7 @@ private:
     ALLEGRO_SAMPLE_INSTANCE *backgroundSound = NULL;
     ALLEGRO_TIMER *timer = NULL;
     ALLEGRO_TIMER *monster_pro = NULL;
-    ALLEGRO_TIMER* game_update_timer;
 
-
-    LEVEL *level = NULL;
-    Menu *menu = NULL;
-
-    std::vector<Monster*> monsterSet;
-    std::list<Tower*> towerSet;
 
     int Monster_Pro_Count = 0;
     int Coin_Inc_Count = 0;
