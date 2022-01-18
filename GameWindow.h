@@ -12,8 +12,6 @@
 #include <time.h>
 #include "Attack.h"
 #include "Slider.h"
-
-//#include "player.h"
 #define GAME_INIT -1
 #define GAME_SETTING 0
 #define GAME_MENU 1
@@ -25,8 +23,6 @@
 #define MAX_ENEMY1 10
 #define MAX_ENEMY2 10
 #define MAX_ENEMY3 8
-
-// The active scene id.
 
 // clock rate
 const float FPS = 30;
@@ -54,6 +50,8 @@ class MovableObject{
     float defence;
     int full_hp;
     int full_mp;
+    int initx;
+    int inity;
     bool hidden;
     ALLEGRO_BITMAP* img;
     ALLEGRO_BITMAP* img_tool;
@@ -99,14 +97,9 @@ public:
     int role = 1;
     int score;
     double last_shoot_timestamp_player = 0;
-    //double last_shoot_timestamp_enemy;
-    //double last_shoot_timestamp_flighter;
-    //double last_shoot_timestamp_monster1;
-    //double last_shoot_timestamp_monster2;
     // Keyboard state, whether the key is down or not.
     bool key_state[ALLEGRO_KEY_MAX];
     // Mouse state, whether the key is down or not.
-    // 1 is for left, 2 is for right, 3 is for middle.
     bool *mouse_state;
     int plus_hp;
     int plus_mp;
@@ -118,12 +111,9 @@ public:
     MovableObject enemy2[MAX_ENEMY2];
     MovableObject enemy3[MAX_ENEMY3];
     MovableObject boss;
-    //MovableObject* player;
     enum {
     SCENE_MENU = 1,
     SCENE_START = 2
-    // [HACKATHON 3-7]
-    // TODO: Declare a new scene id.
     , SCENE_SETTINGS = 3,SCENE_INTRO=4, SCENE_HOME = 5, SCENE_LEVEL2 = 6, SCENE_LEVEL3 = 7, SCENE_BOSS = 8
 };
 private:
@@ -144,6 +134,7 @@ private:
     ALLEGRO_BITMAP *enemy2_pic;
     ALLEGRO_BITMAP *enemy3_pic;
     ALLEGRO_BITMAP *boss_pic;
+    ALLEGRO_BITMAP *intro_pic;
     ALLEGRO_DISPLAY* display = NULL;
     ALLEGRO_FONT *font = NULL;
     ALLEGRO_FONT *Medium_font = NULL;
@@ -155,19 +146,21 @@ private:
     ALLEGRO_SAMPLE_INSTANCE *clearSound = NULL;
     ALLEGRO_SAMPLE_INSTANCE *failSound = NULL;
     ALLEGRO_SAMPLE_INSTANCE *backgroundSound = NULL;
+    ALLEGRO_SAMPLE *menu_sound = NULL;
+    ALLEGRO_SAMPLE_INSTANCE *menuSound;
     ALLEGRO_TIMER *timer = NULL;
     ALLEGRO_TIMER *monster_pro = NULL;
     int emerald_killed = 0;
     int xuejila_killed = 0;
     int ribbonpig_killed = 0;
     int boss_killed = 0;
+    int monster_killed = 0;
     int boss_defeated = 0;
     int monster_spawn = 0;
     int heal = 0;
     int invincible = 0;
     int revive = 0;
     bool redraw = false;
-    bool mute = false;
 };
 
 
