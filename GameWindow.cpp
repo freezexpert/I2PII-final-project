@@ -82,7 +82,7 @@ void GameWindow::game_init(void) {
     enemy2_pic = al_load_bitmap("./enemy2.png");
     enemy3_pic = al_load_bitmap("./enemy3.png");
     boss_pic = al_load_bitmap("./boss.png");
-
+    intro_pic = al_load_bitmap("./intro.png");
     al_set_display_icon(display, icon);
     al_reserve_samples(3);
 
@@ -90,7 +90,10 @@ void GameWindow::game_init(void) {
     startSound = al_create_sample_instance(sample);
     al_set_sample_instance_playmode(startSound, ALLEGRO_PLAYMODE_ONCE);
     al_attach_sample_instance_to_mixer(startSound, al_get_default_mixer());
-
+    menu_sound = al_load_sample("menu.ogg");
+    menuSound = al_create_sample_instance(menu_sound);
+    al_set_sample_instance_playmode(menuSound, ALLEGRO_PLAYMODE_ONCE);
+    al_attach_sample_instance_to_mixer(menuSound, al_get_default_mixer());
     sample = al_load_sample("Bgm.ogg");
     backgroundSound = al_create_sample_instance(sample);
     al_set_sample_instance_playmode(backgroundSound, ALLEGRO_PLAYMODE_ONCE);
@@ -404,22 +407,23 @@ void GameWindow::game_update(void) {
             }
         }
         else if(active_scene == SCENE_BOSS){
-             if(boss_killed == 2){
+             if(boss_defeated == 1){
                 for(int i = 0; i < MAX_ENEMY1; i++){
-                    enemy1[i].hidden =  true;
+                    enemy3[i].hidden =  true;
                 }
                 for(int i = 0; i < MAX_BULLET; i++){
                      player_attack[i].hidden =  true;
                 }
+                boss.hidden = true;
             }
             else{
                 if(boss.hidden){
                     boss.hidden = false;
                 }
-                heal = (heal + 1) % 600;
+                heal = (heal + 1) % 300;
                 invincible = (invincible + 1) % 1000;
                 if(heal == 0){
-                    boss.hp += 100;
+                    boss.hp += (boss.hp == 1000) ? 0 : 100;
                 }
                 for(int i=0;i<MAX_BULLET; i++)
                 {
@@ -446,6 +450,64 @@ void GameWindow::game_update(void) {
                         player_attack[i].hidden=true;
                     }
                 }
+                for(int i = 0; i < MAX_ENEMY3; i++){
+                    if(enemy3[i].hidden){
+                        monster_spawn = (monster_spawn + 1) % 200;
+                        if(monster_spawn == 0){
+                            enemy3[i].hidden = false;
+                            enemy3[i].x = (i % 2) ? window_width - enemy3[i].w : enemy3[i].w;
+                        }
+                    }
+                    else{
+                        enemy3[i].x += enemy3[i].vx * ( i % 2 ? 1 : -1);
+                        if(enemy3[i].x < 0 || enemy3[i].x > window_width)
+                            enemy3[i].vx *= -1;
+                    }
+                }
+                for(int i = 0; i < MAX_BULLET; i++)
+                {
+                    for(int j = 0; j < MAX_ENEMY3; j++)
+                    {
+                        if(player_attack[i].hidden || enemy3[j].hidden) continue;
+                        if((player_attack[i].x <= enemy3[j].x + enemy3[j].w / 2 && player_attack[i].x >= enemy3[j].x - enemy3[j].w / 2))
+                        {
+                            enemy3[j].hp-=player_attack[i].attack;
+                            score+=player_attack[i].attack;
+                            if(enemy3[j].hp<=0)
+                            {
+                                enemy3[j].hidden=true;
+                                xuejila_killed++;
+                                    plus_hp = rand();
+                                    plus_mp = rand();
+                                    if(plus_hp % 3 == 0){
+                                        if(player.hp + 5 > player.full_hp)
+                                            player.hp = player.full_hp;
+                                        else
+                                            player.hp += 5;
+                                    }
+                                    if(plus_mp % 3 == 0)
+                                        if(player.mp + 5 > player.full_mp)
+                                            player.mp = player.full_mp;
+                                        else
+                                            player.mp += 5;
+                            }
+                            player_attack[i].hidden=true;
+                        }
+
+                    }
+                }
+                for(i = 0; i < MAX_ENEMY3; i++){
+                    if(enemy3[i].hidden)
+                        continue;
+                    if( enemy3[i].x - enemy3[i].w / 2 <= player.x + player.w / 2 && enemy3[i].x + enemy3[i].w/3 >= player.x - player.w / 2){
+                        enemy3[i].hidden = true;
+                        player.hp -= enemy3[i].attack;
+                        if(player.hp <= 0){
+                            player.hp = player.full_hp;
+                            game_change_scene(SCENE_HOME);
+                        }
+                    }
+                }
             }
         }
     }
@@ -470,6 +532,7 @@ void GameWindow::game_draw(void) {
     const int Initial_Health = 1;
     char buffer[100];
     if (active_scene == SCENE_MENU) {
+
         al_draw_bitmap(menu_pic, 0, 0, 0);
         al_draw_textf(Large_font, al_map_rgb(255, 255, 255), window_width / 2, window_height / 2 - 150, ALLEGRO_ALIGN_CENTER , "Hakka Story");
         sprintf(buffer, "PRESS ENTER TO START");
@@ -478,11 +541,13 @@ void GameWindow::game_draw(void) {
         sprintf(buffer, "PRESS S TO SETTINGS");
         al_draw_text(Medium_font, al_map_rgb(255, 255, 255), 20, 20 + 2*gapY, 0, buffer);
     }
-//
+    else if(active_scene == SCENE_INTRO){
+        al_draw_bitmap(intro_pic, 0, 0, 0);
+    }
     else if (active_scene == SCENE_START || active_scene == SCENE_LEVEL2 || active_scene == SCENE_LEVEL3 || active_scene == SCENE_BOSS) {
 
         al_draw_bitmap(home_pic, 0, 0, 0);
-        al_play_sample_instance(backgroundSound);
+
 
 
         for(int i = 0;i < MAX_BULLET;i++){
@@ -518,6 +583,7 @@ void GameWindow::game_draw(void) {
             }
         }
         else if(active_scene == SCENE_BOSS){
+            al_play_sample_instance(menuSound);
             al_draw_textf(Large_font, al_map_rgb(0, 0, 0), window_width, 0, ALLEGRO_ALIGN_RIGHT , "Task: Defeat the boss: (%d / 1)", boss_defeated);
             al_draw_textf(Large_font, al_map_rgb(0, 0, 0), window_width, 50, ALLEGRO_ALIGN_RIGHT , "Boss HP: %d", boss.hp);
             draw_movable_object(boss);
@@ -533,9 +599,12 @@ void GameWindow::game_draw(void) {
             if(boss_defeated == 1){
                 al_draw_textf(Large_font, al_map_rgb(0, 0, 0), window_width / 2, window_height / 2, ALLEGRO_ALIGN_CENTER , "Press UP to back to menu.");
             }
+            for(int i = 0; i < MAX_ENEMY3; i++){
+                draw_movable_object(enemy3[i]);
+            }
         }
         al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 0, ALLEGRO_ALIGN_LEFT , "hp : %d", player.hp);
-        al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 20, ALLEGRO_ALIGN_LEFT , "mp : %d", player.mp);
+        //al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 20, ALLEGRO_ALIGN_LEFT , "mp : %d", player.mp);
     }
     else if(active_scene == SCENE_SETTINGS){
         al_draw_bitmap(settings_pic, 0, 0, 0);
@@ -550,10 +619,11 @@ void GameWindow::game_draw(void) {
     }
     else if(active_scene == SCENE_HOME){
         al_draw_bitmap(home_pic, 0, 0, 0);
+        al_play_sample_instance(backgroundSound);
         al_draw_bitmap(player.img, player.x, player.y, 0);
         al_draw_textf(Large_font, al_map_rgb(0, 0, 0), window_width / 2, window_height / 2, ALLEGRO_ALIGN_CENTER , "Press UP to start game.");
         al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 0, ALLEGRO_ALIGN_LEFT , "hp : %d", player.hp);
-        al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 20, ALLEGRO_ALIGN_LEFT , "mp : %d", player.mp);
+        //al_draw_textf(Medium_font, al_map_rgb(0, 0, 0), 0, 20, ALLEGRO_ALIGN_LEFT , "mp : %d", player.mp);
     }
     else if(active_scene == SCENE_INTRO){
 
@@ -564,7 +634,6 @@ void GameWindow::game_draw(void) {
 void
 GameWindow::game_reset()
 {
-    mute = false;
     redraw = false;
 
     // stop sample instance
@@ -592,20 +661,38 @@ GameWindow::game_destroy()
 
     al_destroy_bitmap(icon);
     al_destroy_bitmap(background);
-
+    al_destroy_bitmap(menu_pic);
+    al_destroy_bitmap(settings_pic);
+    al_destroy_bitmap(role1);
+    al_destroy_bitmap(role2);
+    al_destroy_bitmap(role3);
+    al_destroy_bitmap(role4);
+    al_destroy_bitmap(role1_tool);
+    al_destroy_bitmap(role2_tool);
+    al_destroy_bitmap(role3_tool);
+    al_destroy_bitmap(role4_tool);
+    al_destroy_bitmap(home_pic);
+    al_destroy_bitmap(enemy1_pic);
+    al_destroy_bitmap(enemy2_pic);
+    al_destroy_bitmap(enemy3_pic);
+    al_destroy_bitmap(boss_pic);
+    al_destroy_bitmap(intro_pic);
     al_destroy_sample(sample);
+    al_destroy_sample(menu_sound);
     al_destroy_sample_instance(startSound);
     al_destroy_sample_instance(backgroundSound);
-
-    //delete level;
-    //delete menu;
+    al_destroy_sample_instance(menuSound);
 }
 
 void GameWindow::game_change_scene(int next_scene) {
-
+    if(active_scene == SCENE_BOSS){
+        al_stop_sample_instance(menuSound);
+    }
+    if(next_scene == SCENE_BOSS)
+        al_stop_sample_instance(backgroundSound);
     active_scene = next_scene;
 
-    if(active_scene == SCENE_START || active_scene == SCENE_LEVEL2 || active_scene == SCENE_LEVEL3 || active_scene == SCENE_BOSS){
+    if(active_scene == SCENE_START || active_scene == SCENE_LEVEL2 || active_scene == SCENE_LEVEL3 || active_scene == SCENE_BOSS||active_scene == SCENE_HOME){
         if(role == 1){
                     player.img = role1;
                     player.img_tool = role1_tool;
@@ -716,7 +803,7 @@ void GameWindow::game_change_scene(int next_scene) {
         }
         else if(active_scene==SCENE_LEVEL2)
         {
-            player.x = player.x;
+            //player.x = player.x;
             for(int i = 0; i < MAX_ENEMY2; i++){
                 enemy2[i].img = enemy2_pic;
                 enemy2[i].x = window_width - enemy2[i].w/2;
@@ -755,29 +842,51 @@ void GameWindow::game_change_scene(int next_scene) {
                 boss.hp = 1000;
                 boss.attack = 1000;
                 boss.hidden=true;
+
+
+            for(int i = 0; i < MAX_ENEMY3; i++){
+                enemy3[i].img = enemy3_pic;
+                enemy3[i].x = window_width - enemy3[i].w/2;
+                enemy3[i].y = 600;
+                enemy3[i].vx = 4;
+                enemy3[i].w = al_get_bitmap_width(enemy3[i].img);
+                enemy3[i].h = al_get_bitmap_height(enemy3[i].img);
+                enemy3[i].hp = 200;
+                enemy3[i].attack = 50;
+                enemy3[i].hidden=true;
+            }
         }
+        else if(active_scene == SCENE_HOME){
 
+                    player.hp = player.full_hp;
+                    player.mp = player.full_mp;
+                    emerald_killed = 0;
+                    xuejila_killed = 0;
+                    ribbonpig_killed = 0;
+                    boss_killed = 0;
+                }
     }
 
-    else if(active_scene == SCENE_HOME){
-        player.hp = player.full_hp;
-        player.mp = player.full_mp;
-        emerald_killed = 0;
-        xuejila_killed = 0;
-        ribbonpig_killed = 0;
-        boss_killed = 0;
-    }
+
 }
 
 void GameWindow::on_key_down(int keycode) {
     if (active_scene == SCENE_MENU)
     {
         if (keycode == ALLEGRO_KEY_ENTER)
-            game_change_scene(SCENE_START);
+            game_change_scene(SCENE_HOME);
         else if(keycode == ALLEGRO_KEY_S)
             game_change_scene(SCENE_SETTINGS);
-    }
+        else if(keycode == ALLEGRO_KEY_I)
+            game_change_scene(SCENE_INTRO);
 
+    }
+    else if(active_scene == SCENE_INTRO){
+        if(keycode == ALLEGRO_KEY_BACKSPACE)
+            game_change_scene(SCENE_MENU);
+        else if(keycode == ALLEGRO_KEY_ENTER)
+            game_change_scene(SCENE_HOME);
+    }
     else if (active_scene == SCENE_SETTINGS) {
         if (keycode == ALLEGRO_KEY_BACKSPACE)
            game_change_scene(SCENE_MENU);
@@ -799,6 +908,7 @@ void GameWindow::on_key_down(int keycode) {
         if(keycode == ALLEGRO_KEY_N && emerald_killed == 10){
             game_change_scene(SCENE_LEVEL2);
         }
+
     }
     else if(active_scene == SCENE_HOME){
         if(keycode == ALLEGRO_KEY_UP)
@@ -810,6 +920,7 @@ void GameWindow::on_key_down(int keycode) {
         if(keycode == ALLEGRO_KEY_N && ribbonpig_killed == 15){
             game_change_scene(SCENE_LEVEL3);
         }
+
     }
     else if(active_scene == SCENE_LEVEL3){
         if(keycode == ALLEGRO_KEY_UP)
@@ -817,18 +928,18 @@ void GameWindow::on_key_down(int keycode) {
         if(keycode == ALLEGRO_KEY_N && xuejila_killed == 20){
             game_change_scene(SCENE_BOSS);
         }
+
     }
     else if(active_scene == SCENE_BOSS ){
         if(keycode == ALLEGRO_KEY_UP && boss_defeated == 1)
             game_change_scene(SCENE_MENU);
+        else if(keycode == ALLEGRO_KEY_UP)
+            game_change_scene(SCENE_HOME);
     }
 }
 
 
 void GameWindow::on_mouse_down(int btn, int x, int y) {
-    // [HACKATHON 3-8]
-    // TODO: When settings clicked, switch to settings scene.
-    // Uncomment and fill in the code below.
     if (active_scene == SCENE_MENU) {
       if (btn == 1) {
             if (pnt_in_rect(x, y,field_width - 48, 10, 38, 38))
